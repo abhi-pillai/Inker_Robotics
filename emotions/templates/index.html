@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emotion Detector</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>🎭 Emotion Detector</h1>
+        <p class="subtitle">Send a message and AI will detect your emotion</p>
+        
+        <div class="input-section">
+            <textarea id="messageInput" placeholder="Type your message here..." rows="4"></textarea>
+            <button id="analyzeBtn" onclick="analyzeEmotion()">Analyze Emotion</button>
+        </div>
+        
+        <div id="loading" class="loading" style="display: none;">
+            <div class="spinner"></div>
+            <p>Analyzing emotion...</p>
+        </div>
+        
+        <div id="result" class="result" style="display: none;">
+            <h2>Detected Emotion: <span id="emotionLabel"></span></h2>
+            <div id="emotionIcon" class="emotion-icon"></div>
+            <p id="explanation" class="explanation"></p>
+        </div>
+        
+        <div id="error" class="error" style="display: none;"></div>
+    </div>
+
+    <script>
+        async function analyzeEmotion() {
+            const message = document.getElementById('messageInput').value.trim();
+            const loading = document.getElementById('loading');
+            const result = document.getElementById('result');
+            const error = document.getElementById('error');
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            
+            // Reset displays
+            result.style.display = 'none';
+            error.style.display = 'none';
+            
+            if (!message) {
+                error.textContent = 'Please enter a message';
+                error.style.display = 'block';
+                return;
+            }
+            
+            // Show loading
+            loading.style.display = 'block';
+            analyzeBtn.disabled = true;
+            
+            try {
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ message: message })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to analyze emotion');
+                }
+                
+                // Display result
+                const emotionLabel = document.getElementById('emotionLabel');
+                const emotionIcon = document.getElementById('emotionIcon');
+                const explanation = document.getElementById('explanation');
+                
+                emotionLabel.textContent = data.emotion.charAt(0).toUpperCase() + data.emotion.slice(1);
+                emotionLabel.className = `emotion-${data.emotion}`;
+                explanation.textContent = data.explanation;
+                
+                // Set emoji based on emotion
+                const emojis = {
+                    'happy': '😊',
+                    'sad': '😢',
+                    'angry': '😠',
+                    'neutral': '😐'
+                };
+                emotionIcon.textContent = emojis[data.emotion] || '🤔';
+                
+                result.style.display = 'block';
+                
+            } catch (err) {
+                error.textContent = 'Error: ' + err.message;
+                error.style.display = 'block';
+            } finally {
+                loading.style.display = 'none';
+                analyzeBtn.disabled = false;
+            }
+        }
+        
+        // Allow Enter key to submit (Ctrl+Enter for new line)
+        document.getElementById('messageInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                analyzeEmotion();
+            }
+        });
+    </script>
+</body>
+</html>
